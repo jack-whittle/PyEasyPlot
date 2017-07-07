@@ -1,12 +1,24 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'H:\Documents\PythonProjects\ChartingApp\MainWindow.ui'
+# Form implementation generated from reading ui file 'MainWindow.ui'
 #
 # Created by: PyQt5 UI code generator 5.6
 #
 # WARNING! All changes made in this file will be lost!
 
 from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtWidgets import QWidget
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+
+
+class Plotter(object):
+    def __init__(self):
+        self.figure = plt.figure()
+        self.figure.clear()
+        ax = self.figure.add_subplot(111)
+        ax.plot([1,2,3], [1,2,3])
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -22,42 +34,50 @@ class Ui_MainWindow(object):
         self.formLayout.setObjectName("formLayout")
         self.label = QtWidgets.QLabel(self.centralwidget)
         self.label.setObjectName("label")
-        self.formLayout.setWidget(0, QtWidgets.QFormLayout.LabelRole, self.label)
+        self.formLayout.setWidget(1, QtWidgets.QFormLayout.LabelRole, self.label)
         self.comboBox = QtWidgets.QComboBox(self.centralwidget)
         self.comboBox.setObjectName("comboBox")
-        self.formLayout.setWidget(0, QtWidgets.QFormLayout.FieldRole, self.comboBox)
+        self.formLayout.setWidget(1, QtWidgets.QFormLayout.FieldRole, self.comboBox)
         self.label_2 = QtWidgets.QLabel(self.centralwidget)
         self.label_2.setObjectName("label_2")
-        self.formLayout.setWidget(1, QtWidgets.QFormLayout.LabelRole, self.label_2)
+        self.formLayout.setWidget(2, QtWidgets.QFormLayout.LabelRole, self.label_2)
         self.comboBox_2 = QtWidgets.QComboBox(self.centralwidget)
         self.comboBox_2.setObjectName("comboBox_2")
-        self.formLayout.setWidget(1, QtWidgets.QFormLayout.FieldRole, self.comboBox_2)
+        self.formLayout.setWidget(2, QtWidgets.QFormLayout.FieldRole, self.comboBox_2)
         self.label_3 = QtWidgets.QLabel(self.centralwidget)
         self.label_3.setObjectName("label_3")
-        self.formLayout.setWidget(2, QtWidgets.QFormLayout.LabelRole, self.label_3)
+        self.formLayout.setWidget(3, QtWidgets.QFormLayout.LabelRole, self.label_3)
         self.timeEdit = QtWidgets.QTimeEdit(self.centralwidget)
         self.timeEdit.setObjectName("timeEdit")
-        self.formLayout.setWidget(2, QtWidgets.QFormLayout.FieldRole, self.timeEdit)
+        self.formLayout.setWidget(3, QtWidgets.QFormLayout.FieldRole, self.timeEdit)
         self.label_4 = QtWidgets.QLabel(self.centralwidget)
         self.label_4.setObjectName("label_4")
-        self.formLayout.setWidget(3, QtWidgets.QFormLayout.LabelRole, self.label_4)
+        self.formLayout.setWidget(4, QtWidgets.QFormLayout.LabelRole, self.label_4)
         self.timeEdit_2 = QtWidgets.QTimeEdit(self.centralwidget)
         self.timeEdit_2.setObjectName("timeEdit_2")
-        self.formLayout.setWidget(3, QtWidgets.QFormLayout.FieldRole, self.timeEdit_2)
+        self.formLayout.setWidget(4, QtWidgets.QFormLayout.FieldRole, self.timeEdit_2)
         self.pushButton = QtWidgets.QPushButton(self.centralwidget)
         self.pushButton.setObjectName("pushButton")
-        self.formLayout.setWidget(4, QtWidgets.QFormLayout.FieldRole, self.pushButton)
+        self.formLayout.setWidget(5, QtWidgets.QFormLayout.FieldRole, self.pushButton)
+        self.pushButton_2 = QtWidgets.QPushButton(self.centralwidget)
+        self.pushButton_2.setObjectName("pushButton_2")
+        self.formLayout.setWidget(0, QtWidgets.QFormLayout.FieldRole, self.pushButton_2)
         self.horizontalLayout.addLayout(self.formLayout)
         spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.horizontalLayout.addItem(spacerItem)
         self.verticalLayout = QtWidgets.QVBoxLayout()
         self.verticalLayout.setObjectName("verticalLayout")
-        self.dockWidget = QtWidgets.QDockWidget(self.centralwidget)
-        self.dockWidget.setObjectName("dockWidget")
-        self.dockWidgetContents = QtWidgets.QWidget()
-        self.dockWidgetContents.setObjectName("dockWidgetContents")
-        self.dockWidget.setWidget(self.dockWidgetContents)
-        self.verticalLayout.addWidget(self.dockWidget)
+
+        # self.figure = plt.figure()
+        self.plotter = Plotter()
+
+        self.canvas = FigureCanvas(self.plotter.figure)
+        self.canvas.draw()
+        self.toolbar = NavigationToolbar(self.canvas, self.centralwidget)
+
+        self.verticalLayout.addWidget(self.toolbar)
+        self.verticalLayout.addWidget(self.canvas)
+
         self.horizontalLayout.addLayout(self.verticalLayout)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
@@ -79,4 +99,5 @@ class Ui_MainWindow(object):
         self.label_3.setText(_translate("MainWindow", "Start Time:"))
         self.label_4.setText(_translate("MainWindow", "End Time:"))
         self.pushButton.setText(_translate("MainWindow", "Apply"))
+        self.pushButton_2.setText(_translate("MainWindow", "Load Data"))
 

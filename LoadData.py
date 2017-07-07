@@ -29,8 +29,8 @@ class MainWindow(QDialog):
 
         self.df = pd.read_csv(r'resources/Pegasus Data (05-05-17 15h53m23s) - Waregem.csv', delimiter=',', header=5)
         data_names = self.df.columns.tolist()
-        self.figure = plt.figure()
 
+        self.figure = plt.figure()
         self.canvas = FigureCanvas(self.figure)
         self.toolbar = NavigationToolbar(self.canvas, self)
 
