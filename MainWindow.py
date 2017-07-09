@@ -19,6 +19,8 @@ class Plotter(object):
         self.figure.clear()
         ax = self.figure.add_subplot(111)
         ax.plot([1,2,3], [1,2,3])
+        ax.set_xlabel('X label')
+        ax.set_ylabel('Y label')
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
