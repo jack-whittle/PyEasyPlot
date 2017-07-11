@@ -1,5 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib import dates
 import datetime as dt
 from PyQt5.QtWidgets import QDialog, QApplication, QPushButton, QVBoxLayout, QLabel, QComboBox, QFormLayout, QLineEdit
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -16,11 +17,12 @@ def plot_simple_2d(x_col_name, y_col_name, df):
     plt.show()
 
 
-def format_date(date, time):
+def format_date_for_plotting(date, time):
     date_str = date + 'T' + time
     null_dates = date_str == '0/0/0T00:01:00'
     datetimes = date_str[~null_dates]
-    return dt.datetime.strptime(date_str, '%d/%m/%YT%H:%M:%S')
+    datetimes = dt.datetime.strptime(date_str, '%d/%m/%YT%H:%M:%S')
+    return dates.date2num(datetimes)
 
 
 class MainWindow(QDialog):
