@@ -7,7 +7,6 @@
 # WARNING! All changes made in this file will be lost!
 
 from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtWidgets import QWidget
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
@@ -22,10 +21,11 @@ class Plotter(object):
         self.ax.plot([1,2,3], [1,2,3])
         self.ax.set_xlabel('X label')
         self.ax.set_ylabel('Y label')
-        pub.subscribe(self.change_x_axis_on_request, 'Topic')
+        pub.subscribe(self.change_x_listener, 'UpdateX')
 
-    def change_x_axis_on_request(self, update):
+    def change_x_listener(self, update):
         self.ax.set_xlabel(update)
+
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):

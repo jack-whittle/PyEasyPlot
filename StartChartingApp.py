@@ -11,7 +11,7 @@ class StartQT4(QMainWindow):
     def __init__(self, parent=None):
         QDialog.__init__(self, parent)
         self.ui = MainWindow.Ui_MainWindow()
-        # attributes initialised in subsequest methods
+        # attributes initialised in subsequent methods
         self.dm = None
 
         self.ui.setupUi(self)
@@ -32,7 +32,7 @@ class StartQT4(QMainWindow):
     @pyqtSlot()
     def set_x_data(self):
         self.dm.plot_data['x_name'] = self.ui.comboBox.currentText()
-        pub.sendMessage('Topic', update=self.dm.plot_data['x_name'])
+        pub.sendMessage('UpdateX', update=self.dm.plot_data['x_name'])
 
 
 class DataManager():
@@ -43,22 +43,21 @@ class DataManager():
         self.plot_data = None
         if self.data is not None:
             self.inititialise_data()
-        self.data.plot(subplots=True, figsize=(6, 6))
-        plt.legend(loc='best')
+        # self.data.plot(subplots=True, figsize=(6, 6))
+        # plt.legend(loc='best')
 
     def inititialise_data(self):
         if ('Date (D/M/Y)' in self.data.columns) & ('Time (H:M:S)' in self.data.columns):
-            date_str = self.data['Date (D/M/Y)']
-            time_str = self.data['Time (H:M:S)']
-            datetime_str = date_str + 'T' + time_str
-            null_dates = datetime_str == '0/0/0T00:01:00'
-            # Remove rows with null dates
-            datetime_str = datetime_str[~null_dates]
+            # Filter out null dates
+            null_dates = self.data['Date (D/M/Y)'] == '0/0/0'
             self.data = self.data[~null_dates]
-            datetimes = pd.to_datetime(datetime_str, format='%d/%m/%YT%H:%M:%S')
-            self.data['date_time'] = datetimes
+
+            # Concatenate date and time into single column
+            datetime_str = self.data['Date (D/M/Y)'] + 'T' + self.data['Time (H:M:S)']
+            date_times = pd.to_datetime(datetime_str, format='%d/%m/%YT%H:%M:%S')
+            self.data['date_time'] = pd.Series(date_times)
+
             self.data.index = self.data['date_time']
-            del self.data['date_time']
 
             self.x_columns = [self.data.index.name] + self.data.columns.tolist()
             self.y_columns = self.data.columns.tolist()
