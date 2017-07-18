@@ -1,47 +1,72 @@
 import sys
 from PyQt5.QtWidgets import QDialog, QMainWindow, QApplication, QFileDialog
 from PyQt5.QtCore import pyqtSlot
-from matplotlib import dates
-import datetime as dt
+import matplotlib.pyplot as plt
 import MainWindow
 import pandas as pd
+from pubsub import pub
 
 
 class StartQT4(QMainWindow):
     def __init__(self, parent=None):
         QDialog.__init__(self, parent)
         self.ui = MainWindow.Ui_MainWindow()
+        # attributes initialised in subsequest methods
+        self.dm = None
+
         self.ui.setupUi(self)
         self.ui.pushButton_2.clicked.connect(self.choose_file)
+        self.ui.comboBox.currentIndexChanged.connect(self.set_x_data)
 
     @pyqtSlot()
     def choose_file(self):
         fd = QFileDialog(self)
-        self.filename = fd.getOpenFileName()
+        filename = fd.getOpenFileName()
         from os.path import isfile
-        if isfile(self.filename[0]):
-            raw_data = pd.read_csv(self.filename[0], delimiter=',', header=5)
+        if isfile(filename[0]):
+            raw_data = pd.read_csv(filename[0], delimiter=',', header=5)
             self.dm = DataManager(raw_data)
+            self.ui.comboBox.addItems(self.dm.x_columns)
+            self.ui.comboBox_2.addItems(self.dm.y_columns)
+
+    @pyqtSlot()
+    def set_x_data(self):
+        self.dm.plot_data['x_name'] = self.ui.comboBox.currentText()
+        pub.sendMessage('Topic', update=self.dm.plot_data['x_name'])
 
 
 class DataManager():
     def __init__(self, data=None):
-        self.raw_data = data
-        self.add_plottable_date_col()
+        self.data = data
+        self.x_columns = None
+        self.y_columns = None
+        self.plot_data = None
+        if self.data is not None:
+            self.inititialise_data()
+        self.data.plot(subplots=True, figsize=(6, 6))
+        plt.legend(loc='best')
 
-    def add_plottable_date_col(self):
-        if ('Date (D/M/Y)' in self.raw_data.columns) & ('Time (H:M:S)' in self.raw_data.columns):
-            date_str = self.raw_data['Date (D/M/Y)']
-            time_str = self.raw_data['Time (H:M:S)']
+    def inititialise_data(self):
+        if ('Date (D/M/Y)' in self.data.columns) & ('Time (H:M:S)' in self.data.columns):
+            date_str = self.data['Date (D/M/Y)']
+            time_str = self.data['Time (H:M:S)']
             datetime_str = date_str + 'T' + time_str
             null_dates = datetime_str == '0/0/0T00:01:00'
             # Remove rows with null dates
             datetime_str = datetime_str[~null_dates]
-            self.raw_data = self.raw_data[~null_dates]
+            self.data = self.data[~null_dates]
             datetimes = pd.to_datetime(datetime_str, format='%d/%m/%YT%H:%M:%S')
-            plottable_datetime = dates.date2num(datetimes)
-            self.raw_data['Plottable_datetime'] = plottable_datetime
-            print(self.raw_data['Plottable_datetime'].head(5))
+            self.data['date_time'] = datetimes
+            self.data.index = self.data['date_time']
+            del self.data['date_time']
+
+            self.x_columns = [self.data.index.name] + self.data.columns.tolist()
+            self.y_columns = self.data.columns.tolist()
+            self.plot_data = dict()
+            self.plot_data['x_name'] = self.data.index.name
+            self.plot_data['x_data'] = self.data.index
+            self.plot_data['y_name'] = self.y_columns[1]
+            self.plot_data['y_data'] = self.data[self.plot_data['y_name']]
 
 
 if __name__ == "__main__":
