@@ -16,7 +16,8 @@ class StartQT4(QMainWindow):
 
         self.ui.setupUi(self)
         self.ui.pushButton_2.clicked.connect(self.choose_file)
-        self.ui.comboBox.currentIndexChanged.connect(self.set_x_data)
+        self.ui.comboBox.currentIndexChanged.connect(self.x_changed)
+        self.ui.comboBox_2.currentIndexChanged.connect(self.y_changed)
 
     @pyqtSlot()
     def choose_file(self):
@@ -28,11 +29,18 @@ class StartQT4(QMainWindow):
             self.dm = DataManager(raw_data)
             self.ui.comboBox.addItems(self.dm.x_columns)
             self.ui.comboBox_2.addItems(self.dm.y_columns)
+            pub.sendMessage('UpdatePlot', plot_params=self.dm.plot_data)
 
     @pyqtSlot()
-    def set_x_data(self):
-        self.dm.plot_data['x_name'] = self.ui.comboBox.currentText()
-        pub.sendMessage('UpdateX', update=self.dm.plot_data['x_name'])
+    def x_changed(self):
+        new_value = self.ui.comboBox.currentText()
+        self.dm.update_x_plot_data(new_value)
+        pub.sendMessage('UpdatePlot', plot_params=self.dm.plot_data)
+
+    def y_changed(self):
+        new_value = self.ui.comboBox_2.currentText()
+        self.dm.update_y_plot_data(new_value)
+        pub.sendMessage('UpdatePlot', plot_params=self.dm.plot_data)
 
 
 class DataManager():
@@ -63,9 +71,17 @@ class DataManager():
             self.y_columns = self.data.columns.tolist()
             self.plot_data = dict()
             self.plot_data['x_name'] = self.data.index.name
-            self.plot_data['x_data'] = self.data.index
+            self.plot_data['x_data'] = self.data.index.values
             self.plot_data['y_name'] = self.y_columns[1]
-            self.plot_data['y_data'] = self.data[self.plot_data['y_name']]
+            self.plot_data['y_data'] = self.data[self.plot_data['y_name']].values
+
+    def update_y_plot_data(self, new_value):
+        self.plot_data['y_name'] = new_value
+        self.plot_data['y_data'] = self.data[new_value].values
+
+    def update_x_plot_data(self, new_value):
+        self.plot_data['x_name'] = new_value
+        self.plot_data['x_data'] = self.data[new_value].values
 
 
 if __name__ == "__main__":

@@ -15,13 +15,20 @@ from pubsub import pub
 
 class Plotter(object):
     def __init__(self):
-        self.figure = plt.figure()
-        self.figure.clear()
-        self.ax = self.figure.add_subplot(111)
-        self.ax.plot([1,2,3], [1,2,3])
+        self.fig = plt.figure()
+        self.fig.clear()
+        self.ax = self.fig.add_subplot(111)
+        self.line, = self.ax.plot([1, 2, 3], [1, 2, 3])
         self.ax.set_xlabel('X label')
         self.ax.set_ylabel('Y label')
         pub.subscribe(self.change_x_listener, 'UpdateX')
+        pub.subscribe(self.replot_listener, 'UpdatePlot')
+
+    def replot_listener(self, plot_params):
+        self.ax.clear()
+        self.ax.set_xlabel(plot_params['x_name'])
+        self.ax.set_ylabel(plot_params['y_name'])
+        self.ax.plot(plot_params['x_data'], plot_params['y_data'])
 
     def change_x_listener(self, update):
         self.ax.set_xlabel(update)
@@ -78,7 +85,7 @@ class Ui_MainWindow(object):
         # self.figure = plt.figure()
         self.plotter = Plotter()
 
-        self.canvas = FigureCanvas(self.plotter.figure)
+        self.canvas = FigureCanvas(self.plotter.fig)
         self.canvas.draw()
         self.toolbar = NavigationToolbar(self.canvas, self.centralwidget)
 
