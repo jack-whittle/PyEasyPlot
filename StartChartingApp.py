@@ -1,13 +1,12 @@
 import sys
 from PyQt5.QtWidgets import QDialog, QMainWindow, QApplication, QFileDialog
 from PyQt5.QtCore import pyqtSlot
-import matplotlib.pyplot as plt
 import MainWindow
 import pandas as pd
-from pubsub import pub
 from pydispatch import dispatcher
 
-class StartQT4(QMainWindow):
+
+class StartPegasusViewer(QMainWindow):
     def __init__(self, parent=None):
         QDialog.__init__(self, parent)
         self.showMaximized()
@@ -34,8 +33,6 @@ class StartQT4(QMainWindow):
             self.ui.comboBox_2.addItems(self.dm.y_columns)
             self.ui.comboBox_session.addItems([str(x) for x in self.dm.get_sorted_session_keys()])
             dispatcher.send('UpdateXCombo', update=self.dm.x_columns[0])
-            # pub.sendMessage('UpdatePlot', plot_params=self.dm.plot_data)
-            # dispatcher.send("UpdatePlot", plot_params=self.dm.plot_data)
 
     def apply_btn_press(self):
         start_time = self.ui.timeEdit.time().toPyTime()
@@ -48,13 +45,11 @@ class StartQT4(QMainWindow):
         new_value = self.ui.comboBox.currentText()
         self.dm.update_x_plot_data(new_value)
         dispatcher.send("UpdatePlot", plot_params=self.dm.plot_data)
-        # pub.sendMessage('UpdatePlot', plot_params=self.dm.plot_data)
 
     def y_changed(self):
         new_value = self.ui.comboBox_2.currentText()
         self.dm.update_y_plot_data(new_value)
         dispatcher.send("UpdatePlot", plot_params=self.dm.plot_data)
-        # pub.sendMessage('UpdatePlot', plot_params=self.dm.plot_data)
 
     def session_changed(self):
         new_session_key = pd.to_datetime(self.ui.comboBox_session.currentText(), format='%Y/%m/%d %H:%M:%S')
@@ -184,6 +179,7 @@ class DataManager():
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    myapp = StartQT4()
+    app.setStyle('cleanlooks')
+    myapp = StartPegasusViewer()
     myapp.show()
     sys.exit(app.exec_())

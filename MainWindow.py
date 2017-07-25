@@ -6,11 +6,10 @@
 #
 # WARNING! All changes made in this file will be lost!
 
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtCore, QtWidgets
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
-from pubsub import pub
 from pydispatch import dispatcher
 
 
@@ -23,8 +22,6 @@ class Plotter(object):
         self.ax.set_xlabel('X label')
         self.ax.set_ylabel('Y label')
         plt.tight_layout()
-        pub.subscribe(self.change_x_listener, 'UpdateX')
-        pub.subscribe(self.replot_listener, 'UpdatePlot')
         dispatcher.connect(self.replot_listener, signal="UpdatePlot", sender=dispatcher.Any)
 
     def replot_listener(self, plot_params):
@@ -42,13 +39,15 @@ class Plotter(object):
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
+        MainWindow.resize(800, 600)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.horizontalLayout = QtWidgets.QHBoxLayout(self.centralwidget)
         self.horizontalLayout.setObjectName("horizontalLayout")
         self.formLayout = QtWidgets.QFormLayout()
-        self.formLayout.setFieldGrowthPolicy(QtWidgets.QFormLayout.AllNonFixedFieldsGrow)
+        self.formLayout.setFieldGrowthPolicy(QtWidgets.QFormLayout.ExpandingFieldsGrow)
         self.formLayout.setLabelAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
+        self.formLayout.setSizeConstraint(QtWidgets.QFormLayout.SetNoConstraint)
         self.formLayout.setObjectName("formLayout")
         self.pushButton_2 = QtWidgets.QPushButton(self.centralwidget)
         self.pushButton_2.setObjectName("pushButton_2")
@@ -59,6 +58,7 @@ class Ui_MainWindow(object):
         self.formLayout.setWidget(1, QtWidgets.QFormLayout.LabelRole, self.label_session)
         self.comboBox_session = QtWidgets.QComboBox(self.centralwidget)
         self.comboBox_session.setObjectName("comboBox_session")
+        self.comboBox_session.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         self.formLayout.setWidget(1, QtWidgets.QFormLayout.FieldRole, self.comboBox_session)
 
         self.label = QtWidgets.QLabel(self.centralwidget)
@@ -66,12 +66,14 @@ class Ui_MainWindow(object):
         self.formLayout.setWidget(2, QtWidgets.QFormLayout.LabelRole, self.label)
         self.comboBox = QtWidgets.QComboBox(self.centralwidget)
         self.comboBox.setObjectName("comboBox")
+        self.comboBox.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         self.formLayout.setWidget(2, QtWidgets.QFormLayout.FieldRole, self.comboBox)
         self.label_2 = QtWidgets.QLabel(self.centralwidget)
         self.label_2.setObjectName("label_2")
         self.formLayout.setWidget(3, QtWidgets.QFormLayout.LabelRole, self.label_2)
         self.comboBox_2 = QtWidgets.QComboBox(self.centralwidget)
         self.comboBox_2.setObjectName("comboBox_2")
+        self.comboBox_2.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         self.formLayout.setWidget(3, QtWidgets.QFormLayout.FieldRole, self.comboBox_2)
         self.label_3 = QtWidgets.QLabel(self.centralwidget)
         self.label_3.setObjectName("label_3")
@@ -88,21 +90,19 @@ class Ui_MainWindow(object):
         self.pushButton = QtWidgets.QPushButton(self.centralwidget)
         self.pushButton.setObjectName("pushButton")
         self.formLayout.setWidget(6, QtWidgets.QFormLayout.FieldRole, self.pushButton)
-        self.horizontalLayout.addLayout(self.formLayout)
+        self.horizontalLayout.addLayout(self.formLayout, 1)
         spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.horizontalLayout.addItem(spacerItem)
         self.verticalLayout = QtWidgets.QVBoxLayout()
         self.verticalLayout.setObjectName("verticalLayout")
-
         self.plotter = Plotter()
         self.canvas = FigureCanvas(self.plotter.fig)
         self.canvas.draw()
         self.toolbar = NavigationToolbar(self.canvas, self.centralwidget)
-
         self.verticalLayout.addWidget(self.toolbar)
         self.verticalLayout.addWidget(self.canvas)
+        self.horizontalLayout.addLayout(self.verticalLayout, 4)
 
-        self.horizontalLayout.addLayout(self.verticalLayout)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
         self.menubar.setGeometry(QtCore.QRect(0, 0, 716, 21))
@@ -117,7 +117,7 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "Pegasus Viewer"))
         self.label.setText(_translate("MainWindow", "X Data:"))
         self.label_2.setText(_translate("MainWindow", "Y Data:"))
         self.label_3.setText(_translate("MainWindow", "Start Time:"))
