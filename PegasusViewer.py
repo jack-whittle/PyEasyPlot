@@ -4,6 +4,7 @@ from PyQt5.QtCore import pyqtSlot
 import MainWindow
 import pandas as pd
 from pydispatch import dispatcher
+import os
 
 
 class StartPegasusViewer(QMainWindow):
@@ -20,6 +21,7 @@ class StartPegasusViewer(QMainWindow):
         self.ui.comboBox_2.currentIndexChanged.connect(self.y_changed)
         self.ui.comboBox_session.currentIndexChanged.connect(self.session_changed)
         self.ui.pushButton.clicked.connect(self.apply_btn_press)
+        self.ui.pushButton_export.clicked.connect(self.export_btn_press)
 
     @pyqtSlot()
     def choose_file(self):
@@ -39,6 +41,14 @@ class StartPegasusViewer(QMainWindow):
         end_time = self.ui.timeEdit_2.time().toPyTime()
         self.dm.apply_time_filter(start_time, end_time)
         dispatcher.send("UpdatePlot", plot_params=self.dm.plot_data)
+
+    def export_btn_press(self):
+        fd = QFileDialog(self)
+        export_dir = str(fd.getExistingDirectory(self, "Select Export Directory"))
+        export_dir = export_dir + os.sep + str(self.dm.current_session_key) + os.sep
+        if not os.path.exists(export_dir):
+            os.makedirs(export_dir)
+        dispatcher.send("ExportPlots", plot_params=self.dm.plot_data, export_dir=export_dir)
 
     @pyqtSlot()
     def x_changed(self):

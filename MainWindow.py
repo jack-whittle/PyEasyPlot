@@ -8,9 +8,12 @@
 
 from PyQt5 import QtCore, QtWidgets
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from pydispatch import dispatcher
+import numpy as np
+import pandas as pd
 
 
 class Plotter(object):
@@ -28,9 +31,25 @@ class Plotter(object):
         self.ax.clear()
         self.ax.set_xlabel(plot_params['x_name'])
         self.ax.set_ylabel(plot_params['y_name'])
+        if plot_params['x_name'] == 'date_time':
+            self.plot_time_series(plot_params)
+
+    def plot_time_series(self, plot_params):
         self.ax.plot(list(plot_params['x_data']), list(plot_params['y_data']))
+        x = mdates.date2num(pd.to_datetime(plot_params['x_data']).to_pydatetime())
+        fit = np.polyfit([float(xi) for xi in x], [float(y) for y in plot_params['y_data']], 1)
+        p = np.poly1d(fit)
+        self.ax.plot(list(plot_params['x_data']), list(p([float(xi) for xi in x])), 'm-')
+        self.ax.legend([plot_params['y_name'], 'Trend'])
         self.ax.grid('on')
         self.fig.canvas.draw()
+
+    def plot_dependence(self, plot_params):
+        return None
+
+    def export_plot(self, plot_params, export_dir):
+        self.replot_listener(plot_params)
+        self.fig.savefig(export_dir + plot_params['y_name'] + ' Vs ' + plot_params['x_name'] + '.png')
 
     def change_x_listener(self, update):
         self.ax.set_xlabel(update)
@@ -90,6 +109,9 @@ class Ui_MainWindow(object):
         self.pushButton = QtWidgets.QPushButton(self.centralwidget)
         self.pushButton.setObjectName("pushButton")
         self.formLayout.setWidget(6, QtWidgets.QFormLayout.FieldRole, self.pushButton)
+        self.pushButton_export = QtWidgets.QPushButton(self.centralwidget)
+        self.pushButton_export.setObjectName("pushButton")
+        self.formLayout.setWidget(7, QtWidgets.QFormLayout.FieldRole, self.pushButton_export)
         self.horizontalLayout.addLayout(self.formLayout, 1)
         spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.horizontalLayout.addItem(spacerItem)
@@ -123,6 +145,7 @@ class Ui_MainWindow(object):
         self.label_3.setText(_translate("MainWindow", "Start Time:"))
         self.label_4.setText(_translate("MainWindow", "End Time:"))
         self.pushButton.setText(_translate("MainWindow", "Apply"))
+        self.pushButton_export.setText(_translate("MainWindow", "Export Plots"))
         self.pushButton_2.setText(_translate("MainWindow", "Load Data"))
         self.label_session.setText(_translate("MainWindow", "Session:"))
 
