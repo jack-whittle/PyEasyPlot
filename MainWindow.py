@@ -14,6 +14,7 @@ from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as Navigatio
 from pydispatch import dispatcher
 import numpy as np
 import pandas as pd
+import os
 
 
 class Plotter(object):
@@ -26,6 +27,7 @@ class Plotter(object):
         self.ax.set_ylabel('Y label')
         plt.tight_layout()
         dispatcher.connect(self.replot_listener, signal="UpdatePlot", sender=dispatcher.Any)
+        dispatcher.connect(self.export_plot, signal="ExportPlot", sender=dispatcher.Any)
 
     def replot_listener(self, plot_params):
         self.ax.clear()
@@ -49,7 +51,7 @@ class Plotter(object):
 
     def export_plot(self, plot_params, export_dir):
         self.replot_listener(plot_params)
-        self.fig.savefig(export_dir + plot_params['y_name'] + ' Vs ' + plot_params['x_name'] + '.png')
+        self.fig.savefig(export_dir + os.sep + plot_params['y_name'] + ' Vs ' + plot_params['x_name'] + '.png')
 
     def change_x_listener(self, update):
         self.ax.set_xlabel(update)
@@ -109,9 +111,14 @@ class Ui_MainWindow(object):
         self.pushButton = QtWidgets.QPushButton(self.centralwidget)
         self.pushButton.setObjectName("pushButton")
         self.formLayout.setWidget(6, QtWidgets.QFormLayout.FieldRole, self.pushButton)
+
+        self.pushButton_smooth = QtWidgets.QPushButton(self.centralwidget)
+        self.pushButton_smooth.setObjectName("pushButton_smooth")
+        self.formLayout.setWidget(7, QtWidgets.QFormLayout.FieldRole, self.pushButton_smooth)
+
         self.pushButton_export = QtWidgets.QPushButton(self.centralwidget)
-        self.pushButton_export.setObjectName("pushButton")
-        self.formLayout.setWidget(7, QtWidgets.QFormLayout.FieldRole, self.pushButton_export)
+        self.pushButton_export.setObjectName("pushButton_export")
+        self.formLayout.setWidget(8, QtWidgets.QFormLayout.FieldRole, self.pushButton_export)
         self.horizontalLayout.addLayout(self.formLayout, 1)
         spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.horizontalLayout.addItem(spacerItem)
@@ -146,6 +153,7 @@ class Ui_MainWindow(object):
         self.label_4.setText(_translate("MainWindow", "End Time:"))
         self.pushButton.setText(_translate("MainWindow", "Apply"))
         self.pushButton_export.setText(_translate("MainWindow", "Export Plots"))
+        self.pushButton_smooth.setText(_translate("MainWindow", "Apply Smoothing"))
         self.pushButton_2.setText(_translate("MainWindow", "Load Data"))
         self.label_session.setText(_translate("MainWindow", "Session:"))
 

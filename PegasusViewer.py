@@ -3,6 +3,7 @@ from PyQt5.QtWidgets import QDialog, QMainWindow, QApplication, QFileDialog
 from PyQt5.QtCore import pyqtSlot
 import MainWindow
 import pandas as pd
+import numpy as np
 from pydispatch import dispatcher
 import os
 
@@ -22,6 +23,7 @@ class StartPegasusViewer(QMainWindow):
         self.ui.comboBox_session.currentIndexChanged.connect(self.session_changed)
         self.ui.pushButton.clicked.connect(self.apply_btn_press)
         self.ui.pushButton_export.clicked.connect(self.export_btn_press)
+        self.ui.pushButton_smooth.clicked.connect(self.apply_moving_avg)
 
     @pyqtSlot()
     def choose_file(self):
@@ -45,10 +47,17 @@ class StartPegasusViewer(QMainWindow):
     def export_btn_press(self):
         fd = QFileDialog(self)
         export_dir = str(fd.getExistingDirectory(self, "Select Export Directory"))
-        export_dir = export_dir + os.sep + str(self.dm.current_session_key) + os.sep
+        export_dir = os.path.dirname(export_dir + os.sep + str(self.dm.current_session_key) + os.sep)
         if not os.path.exists(export_dir):
             os.makedirs(export_dir)
-        dispatcher.send("ExportPlots", plot_params=self.dm.plot_data, export_dir=export_dir)
+        export_vars = ['Battery Voltage', 'Temperature (degC)', 'Humidity (%)', 'Pressure (hPa)']
+        for export_var in export_vars:
+            self.dm.update_y_plot_data(export_var)
+            dispatcher.send("ExportPlot", plot_params=self.dm.plot_data, export_dir=export_dir)
+
+    def apply_moving_avg(self):
+        self.dm.apply_moving_avg()
+        dispatcher.send("UpdatePlot", plot_params=self.dm.plot_data)
 
     @pyqtSlot()
     def x_changed(self):
@@ -133,17 +142,6 @@ class DataManager():
         end_time = self.cur_plot_df['date_time'][len(self.cur_plot_df) - 1]
         self.cur_end_time = DataManager.PdTimestamp2Datetime(end_time).time()
 
-    # Splits data into different sessions if there is a gap of >10m between points
-    def split_on_time(self):
-        self.data['tdelta'] = (self.data['date_time'] - self.data['date_time'].shift()).fillna(0)
-        gap_indexes = self.data[self.data['tdelta'] > pd.Timedelta('10 m')].index.tolist()
-        if gap_indexes:
-            start_idx = 0
-            for gap_index in gap_indexes:
-                df_session = self.data[start_idx: gap_index-2]
-                self.sessions.append(df_session)
-                start_idx = gap_index
-
     def split_on_id(self):
         gap_indexes = self.data[self.data['Session Index'] == 0].index.tolist()
         if len(gap_indexes) == 1:
@@ -179,6 +177,14 @@ class DataManager():
         self.plot_data['x_data'] = self.cur_plot_df[self.plot_data['x_name']].values
         self.plot_data['y_data'] = self.cur_plot_df[self.plot_data['y_name']].values
 
+    def apply_moving_avg(self, window_len=10):
+        # Get the pandas series from current df
+        y_data = self.cur_plot_df[self.plot_data['y_name']]
+        y_data = y_data.rolling(window=window_len).mean()
+        null_mask = pd.notnull(y_data)
+        y_data = y_data[null_mask]
+        self.plot_data['y_data'] = y_data.values
+        self.plot_data['x_data'] = self.plot_data['x_data'][null_mask]
 
     @staticmethod
     def PdTimestamp2Datetime(PdTimestamp):
