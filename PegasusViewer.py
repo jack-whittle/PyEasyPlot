@@ -109,51 +109,63 @@ class DataManager():
             self.x_columns = ['date_time'] + self.data.columns.tolist()
             self.y_columns = self.data.columns.tolist()
             self.data['date_time'] = date_times
+            self.data.set_index(['date_time'], inplace=True)
             # Create dictionary for which each entry is a session
             self.split_on_id()
             session_keys = self.get_sorted_session_keys()
             # Set current session
             self.current_session_key = session_keys[0]
             self.cur_plot_df = self.sessions[self.current_session_key]
-            self.cur_start_time = self.cur_plot_df['date_time'][0]
-            self.cur_end_time = self.cur_plot_df['date_time'][len(self.cur_plot_df)-1]
+            self.cur_start_time = self.cur_plot_df.index[0]
+            self.cur_end_time = self.cur_plot_df.index[len(self.cur_plot_df)-1]
             # Create plot data dictionary
             self.plot_data = dict()
             self.plot_data['x_name'] = 'date_time'
-            self.plot_data['x_data'] = self.cur_plot_df['date_time'].values
+            self.plot_data['x_data'] = None
             self.plot_data['y_name'] = self.y_columns[1]
-            self.plot_data['y_data'] = self.cur_plot_df[self.plot_data['y_name']].values
+            self.plot_data['y_data'] = self.cur_plot_df[self.plot_data['y_name']]
 
     def update_x_plot_data(self, new_value):
         self.plot_data['x_name'] = new_value
-        self.plot_data['x_data'] = self.cur_plot_df[new_value].values
+        if new_value == 'date_time':
+            self.plot_data['x_data'] = None
+        else:
+            self.plot_data['x_data'] = self.cur_plot_df[new_value].values
 
     def update_y_plot_data(self, new_value):
         self.plot_data['y_name'] = new_value
-        self.plot_data['y_data'] = self.cur_plot_df[new_value].values
+        if self.plot_data['x_name'] == 'date_time':
+            self.plot_data['y_data'] = self.cur_plot_df[new_value]
+        else:
+            self.plot_data['y_data'] = self.cur_plot_df[new_value].values
 
     def update_session_plot_data(self, new_session_key):
         self.current_session_key = new_session_key
         self.cur_plot_df = self.sessions[self.current_session_key]
-        self.plot_data['x_data'] = self.cur_plot_df[self.plot_data['x_name']].values
-        self.plot_data['y_data'] = self.cur_plot_df[self.plot_data['y_name']].values
-        start_time = self.cur_plot_df['date_time'][0]
+        # If plotting time series then no need to set x_data, use index instead
+        if self.plot_data['x_name'] == 'date_time':
+            self.plot_data['x_data'] = None
+            self.plot_data['y_data'] = self.cur_plot_df[self.plot_data['y_name']]
+        else:
+            self.plot_data['x_data'] = self.cur_plot_df[self.plot_data['x_name']].values
+            self.plot_data['y_data'] = self.cur_plot_df[self.plot_data['y_name']].values
+        start_time = self.cur_plot_df.index[0]
         self.cur_start_time = DataManager.PdTimestamp2Datetime(start_time).time()
-        end_time = self.cur_plot_df['date_time'][len(self.cur_plot_df) - 1]
+        end_time = self.cur_plot_df.index[len(self.cur_plot_df) - 1]
         self.cur_end_time = DataManager.PdTimestamp2Datetime(end_time).time()
 
     def split_on_id(self):
-        gap_indexes = self.data[self.data['Session Index'] == 0].index.tolist()
+        gap_indexes = np.where(self.data['Session Index'] == 0)[0]
         if len(gap_indexes) == 1:
-            self.sessions[self.data['date_time'][0]] = self.data
+            self.sessions[self.data.index[0]] = self.data
         else:
             for i in range(len(gap_indexes) - 1):
-                df_session = self.data[gap_indexes[i]: gap_indexes[i+1]]
-                df_session = df_session.reset_index()
-                self.sessions[df_session['date_time'][0]] = df_session
-            df_session = self.data[gap_indexes[len(gap_indexes)-1]:]
-            df_session = df_session.reset_index()
-            self.sessions[df_session['date_time'][0]] = df_session
+                df_session = self.data.iloc[gap_indexes[i]: gap_indexes[i+1]]
+                # df_session = df_session.reset_index()
+                self.sessions[df_session.index[0]] = df_session
+            df_session = self.data.iloc[gap_indexes[len(gap_indexes)-1]:]
+            # df_session = df_session.reset_index()
+            self.sessions[df_session.index[0]] = df_session
 
     def get_sorted_session_keys(self):
         if self.sessions:
@@ -168,14 +180,17 @@ class DataManager():
         import datetime as dt
         self.cur_start_time = start_time
         self.cur_end_time = end_time
-        date = self.sessions[self.current_session_key]['date_time'][0].date()
+        date = self.sessions[self.current_session_key].index[0].date()
         start_time = pd.to_datetime(dt.datetime.combine(date, start_time))
         end_time = pd.to_datetime(dt.datetime.combine(date, end_time))
         current_session = self.sessions[self.current_session_key]
-        self.cur_plot_df = current_session[(current_session['date_time'] > start_time) &
-                                           (current_session['date_time'] < end_time)]
-        self.plot_data['x_data'] = self.cur_plot_df[self.plot_data['x_name']].values
-        self.plot_data['y_data'] = self.cur_plot_df[self.plot_data['y_name']].values
+        self.cur_plot_df = current_session[(current_session.index > start_time) &
+                                           (current_session.index < end_time)]
+        if self.plot_data['x_name'] == 'date_time':
+            self.plot_data['y_data'] = self.cur_plot_df[self.plot_data['y_name']]
+        else:
+            self.plot_data['x_data'] = self.cur_plot_df[self.plot_data['x_name']].values
+            self.plot_data['y_data'] = self.cur_plot_df[self.plot_data['y_name']].values
 
     def apply_moving_avg(self, window_len=10):
         # Get the pandas series from current df
@@ -183,8 +198,11 @@ class DataManager():
         y_data = y_data.rolling(window=window_len).mean()
         null_mask = pd.notnull(y_data)
         y_data = y_data[null_mask]
-        self.plot_data['y_data'] = y_data.values
-        self.plot_data['x_data'] = self.plot_data['x_data'][null_mask]
+        if self.plot_data['x_name'] == 'date_time':
+            self.plot_data['y_data'] = y_data
+        else:
+            self.plot_data['y_data'] = y_data.values
+            self.plot_data['x_data'] = self.plot_data['x_data'][null_mask]
 
     @staticmethod
     def PdTimestamp2Datetime(PdTimestamp):

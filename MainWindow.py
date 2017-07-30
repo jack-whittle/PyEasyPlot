@@ -37,12 +37,25 @@ class Plotter(object):
             self.plot_time_series(plot_params)
 
     def plot_time_series(self, plot_params):
-        self.ax.plot(list(plot_params['x_data']), list(plot_params['y_data']))
-        x = mdates.date2num(pd.to_datetime(plot_params['x_data']).to_pydatetime())
+        self.ax.plot(plot_params['y_data'])
+        # Add a table with summary statistics
+        y_data = pd.to_numeric(plot_params['y_data'])
+        summary_stats_df = pd.DataFrame([round(y_data.mean(), 3), round(y_data.std(), 3)],
+                                        index=['Mean', 'Std'])
+        self.ax.table(cellText=summary_stats_df.values,
+                      colWidths=[0.1],
+                      rowLabels=summary_stats_df.index,
+                      colLabels=None,
+                      cellLoc='center',
+                      rowLoc='center',
+                      loc=4)
+        # plt.subplots_adjust(top=0.9)
+        # Plot trend
+        x = mdates.date2num(pd.to_datetime(plot_params['y_data'].index).to_pydatetime())
         fit = np.polyfit([float(xi) for xi in x], [float(y) for y in plot_params['y_data']], 1)
         p = np.poly1d(fit)
-        self.ax.plot(list(plot_params['x_data']), list(p([float(xi) for xi in x])), 'm-')
-        self.ax.legend([plot_params['y_name'], 'Trend'])
+        self.ax.plot(list(plot_params['y_data'].index), list(p([float(xi) for xi in x])), 'm-')
+        self.ax.legend([plot_params['y_name'], 'Trend'], loc=0)
         self.ax.grid('on')
         self.fig.canvas.draw()
 
