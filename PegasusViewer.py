@@ -50,7 +50,14 @@ class StartPegasusViewer(QMainWindow):
         export_dir = os.path.dirname(export_dir + os.sep + str(self.dm.current_session_key) + os.sep)
         if not os.path.exists(export_dir):
             os.makedirs(export_dir)
-        export_vars = ['Battery Voltage', 'Temperature (degC)', 'Humidity (%)', 'Pressure (hPa)']
+
+        # Load standard plots from config file
+        if os.path.isfile(r'config/Standard_Plots.csv'):
+            std_plots_df = pd.read_csv(r'config/Standard_Plots.csv')
+            read_plots = std_plots_df.columns.tolist()
+            export_vars = list(set(read_plots).intersection(self.dm.y_columns))
+        else:
+            export_vars = ['Battery Voltage', 'Temperature (degC)', 'Humidity (%)', 'Pressure (hPa)']
         for export_var in export_vars:
             self.dm.update_y_plot_data(export_var)
             dispatcher.send("ExportPlot", plot_params=self.dm.plot_data, export_dir=export_dir)
@@ -193,9 +200,10 @@ class DataManager():
             self.plot_data['y_data'] = self.cur_plot_df[self.plot_data['y_name']].values
 
     def apply_moving_avg(self, window_len=10):
+        self.cur_plot_df = self.cur_plot_df.rolling('1min', center=True).mean()
         # Get the pandas series from current df
         y_data = self.cur_plot_df[self.plot_data['y_name']]
-        y_data = y_data.rolling(window=window_len).mean()
+        # y_data = y_data.rolling(window=window_len).mean()
         null_mask = pd.notnull(y_data)
         y_data = y_data[null_mask]
         if self.plot_data['x_name'] == 'date_time':

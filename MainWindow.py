@@ -48,8 +48,9 @@ class Plotter(object):
                       colLabels=None,
                       cellLoc='center',
                       rowLoc='center',
-                      loc=4)
-        # plt.subplots_adjust(top=0.9)
+                      loc='top left')
+        plt.subplots_adjust(top=0.94)
+        plt.subplots_adjust(left=0.15)
         # Plot trend
         x = mdates.date2num(pd.to_datetime(plot_params['y_data'].index).to_pydatetime())
         fit = np.polyfit([float(xi) for xi in x], [float(y) for y in plot_params['y_data']], 1)
@@ -64,7 +65,9 @@ class Plotter(object):
 
     def export_plot(self, plot_params, export_dir):
         self.replot_listener(plot_params)
-        self.fig.savefig(export_dir + os.sep + plot_params['y_name'] + ' Vs ' + plot_params['x_name'] + '.png')
+        y_name = plot_params['y_name'].replace('/', ' per ')
+        x_name = plot_params['x_name'].replace('/', ' per ')
+        self.fig.savefig(export_dir + os.sep + y_name + ' Vs ' + x_name + '.png')
 
     def change_x_listener(self, update):
         self.ax.set_xlabel(update)
