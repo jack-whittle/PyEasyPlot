@@ -1,6 +1,7 @@
 import sys
-from PyQt5.QtWidgets import QDialog, QMainWindow, QApplication, QFileDialog
+from PyQt5.QtWidgets import QDialog, QMainWindow, QApplication, QFileDialog, QMessageBox
 from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtGui import QIcon
 import MainWindow
 import pandas as pd
 import numpy as np
@@ -18,7 +19,7 @@ class StartPegasusViewer(QMainWindow):
 
         self.ui.setupUi(self)
         self.ui.pushButton_2.clicked.connect(self.choose_file)
-        self.ui.comboBox.currentIndexChanged.connect(self.x_changed)
+        # self.ui.comboBox.currentIndexChanged.connect(self.x_changed)
         self.ui.comboBox_2.currentIndexChanged.connect(self.y_changed)
         self.ui.comboBox_session.currentIndexChanged.connect(self.session_changed)
         self.ui.pushButton.clicked.connect(self.apply_btn_press)
@@ -33,10 +34,11 @@ class StartPegasusViewer(QMainWindow):
         if isfile(filename[0]):
             raw_data = pd.read_csv(filename[0], delimiter=',', header=5)
             self.dm = DataManager(raw_data)
-            self.ui.comboBox.addItems(self.dm.x_columns)
+            # self.ui.comboBox.addItems(self.dm.x_columns)
             self.ui.comboBox_2.addItems(self.dm.y_columns)
             self.ui.comboBox_session.addItems([str(x) for x in self.dm.get_sorted_session_keys()])
-            dispatcher.send('UpdateXCombo', update=self.dm.x_columns[0])
+            # dispatcher.send('UpdateXCombo', update=self.dm.x_columns[0])
+            self.ui.pushButton_2.setEnabled(False)
 
     def apply_btn_press(self):
         start_time = self.ui.timeEdit.time().toPyTime()
@@ -47,7 +49,8 @@ class StartPegasusViewer(QMainWindow):
     def export_btn_press(self):
         fd = QFileDialog(self)
         export_dir = str(fd.getExistingDirectory(self, "Select Export Directory"))
-        export_dir = os.path.dirname(export_dir + os.sep + str(self.dm.current_session_key) + os.sep)
+        folder_str = str(self.dm.current_session_key).replace(':', '-')
+        export_dir = os.path.dirname(export_dir + os.sep + folder_str + os.sep)
         if not os.path.exists(export_dir):
             os.makedirs(export_dir)
 
@@ -57,7 +60,7 @@ class StartPegasusViewer(QMainWindow):
             read_plots = std_plots_df.columns.tolist()
             export_vars = list(set(read_plots).intersection(self.dm.y_columns))
         else:
-            export_vars = ['Battery Voltage', 'Temperature (degC)', 'Humidity (%)', 'Pressure (hPa)']
+            export_vars = ['Temperature (degC)', 'Humidity (%)', 'Pressure (hPa)']
         for export_var in export_vars:
             self.dm.update_y_plot_data(export_var)
             dispatcher.send("ExportPlot", plot_params=self.dm.plot_data, export_dir=export_dir)
@@ -66,11 +69,11 @@ class StartPegasusViewer(QMainWindow):
         self.dm.apply_moving_avg()
         dispatcher.send("UpdatePlot", plot_params=self.dm.plot_data)
 
-    @pyqtSlot()
-    def x_changed(self):
-        new_value = self.ui.comboBox.currentText()
-        self.dm.update_x_plot_data(new_value)
-        dispatcher.send("UpdatePlot", plot_params=self.dm.plot_data)
+    # @pyqtSlot()
+    # def x_changed(self):
+    #     new_value = self.ui.comboBox.currentText()
+    #     self.dm.update_x_plot_data(new_value)
+    #     dispatcher.send("UpdatePlot", plot_params=self.dm.plot_data)
 
     def y_changed(self):
         new_value = self.ui.comboBox_2.currentText()
@@ -113,14 +116,17 @@ class DataManager():
             date_times = pd.Series(date_times)
             del self.data['Date (D/M/Y)']
             del self.data['Time (H:M:S)']
-            self.x_columns = ['date_time'] + self.data.columns.tolist()
-            self.y_columns = self.data.columns.tolist()
+            if ('Master Index' in self.data.columns):
+                del self.data['Master Index']
+            del self.data['index']
+            # self.x_columns = ['date_time'] + self.data.columns.tolist()
             self.data['date_time'] = date_times
             self.data.set_index(['date_time'], inplace=True)
             # Create dictionary for which each entry is a session
             self.split_on_id()
             session_keys = self.get_sorted_session_keys()
             # Set current session
+            self.y_columns = self.data.columns.tolist()
             self.current_session_key = session_keys[0]
             self.cur_plot_df = self.sessions[self.current_session_key]
             self.cur_start_time = self.cur_plot_df.index[0]
@@ -131,6 +137,14 @@ class DataManager():
             self.plot_data['x_data'] = None
             self.plot_data['y_name'] = self.y_columns[1]
             self.plot_data['y_data'] = self.cur_plot_df[self.plot_data['y_name']]
+        else:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Warning)
+            msg.setWindowTitle('Incorrect Data')
+            msg.setInformativeText(
+                r"Unable to locate the Date and Time columns with the correctly named column header")
+            msg.setStandardButtons(QMessageBox.Ok)
+            msg.exec_()
 
     def update_x_plot_data(self, new_value):
         self.plot_data['x_name'] = new_value
@@ -163,15 +177,14 @@ class DataManager():
 
     def split_on_id(self):
         gap_indexes = np.where(self.data['Session Index'] == 0)[0]
+        del self.data['Session Index']
         if len(gap_indexes) == 1:
             self.sessions[self.data.index[0]] = self.data
         else:
             for i in range(len(gap_indexes) - 1):
                 df_session = self.data.iloc[gap_indexes[i]: gap_indexes[i+1]]
-                # df_session = df_session.reset_index()
                 self.sessions[df_session.index[0]] = df_session
             df_session = self.data.iloc[gap_indexes[len(gap_indexes)-1]:]
-            # df_session = df_session.reset_index()
             self.sessions[df_session.index[0]] = df_session
 
     def get_sorted_session_keys(self):
@@ -200,12 +213,13 @@ class DataManager():
             self.plot_data['y_data'] = self.cur_plot_df[self.plot_data['y_name']].values
 
     def apply_moving_avg(self, window_len=10):
-        self.cur_plot_df = self.cur_plot_df.rolling('1min', center=True).mean()
+        self.cur_plot_df = self.cur_plot_df.rolling(window_len).mean()
         # Get the pandas series from current df
         y_data = self.cur_plot_df[self.plot_data['y_name']]
         # y_data = y_data.rolling(window=window_len).mean()
         null_mask = pd.notnull(y_data)
         y_data = y_data[null_mask]
+        self.cur_plot_df = self.cur_plot_df[null_mask]
         if self.plot_data['x_name'] == 'date_time':
             self.plot_data['y_data'] = y_data
         else:
@@ -222,6 +236,19 @@ class DataManager():
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setStyle('cleanlooks')
+    app.setWindowIcon(QIcon(r'resources/PegasusLogo.PNG'))
     myapp = StartPegasusViewer()
     myapp.show()
+    msg = QMessageBox()
+    msg.setIcon(QMessageBox.Warning)
+    msg.setWindowTitle('Terms of Use, Software Use and Disclaimer')
+    msg.setText('Pegasus Viewer v1.0.0')
+    msg.setInformativeText(r"This software is provided on an ‘as is’ basis with no warranty implied or given by "
+            "BAE Systems.  It  is supplied as freely distributable software for use by UK Sport, the British Equestrian "
+            "Federation and related bodies for the purpose of graphical representation of data derived from Pegasus units.  "
+            "The company takes no responsibility for any loss or damage arising, directly or indirectly, as a result of "
+            "use of the software, and gives no guarantees as to the veracity of the resultant formatted/plotted data.")
+    msg.setStandardButtons(QMessageBox.Ok)
+    msg.exec_()
+
     sys.exit(app.exec_())
